@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TextGlow — Beautiful GitHub banners via URL</title>
+<meta name="description" content="Generate beautiful animated GitHub README banners with custom fonts, gradients, patterns and effects. No uploads — just a URL.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #05050a;
+  --s1:      #0b0b14;
+  --s2:      #0f0f1c;
+  --border:  rgba(255,255,255,0.08);
+  --text:    #e2e2f0;
+  --muted:   #5e5e78;
+  --a1:      #ff6b9d;
+  --a2:      #a855f7;
+  --green:   #4ade80;
+  --r:       10px;
+  --mono:    'Fira Code','Cascadia Code','Consolas',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+body{min-height:100vh}
+a{color:inherit;text-decoration:none}
+::selection{background:rgba(168,85,247,.3)}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:#252535;border-radius:3px}
+
+/* Layout */
+.wrap{max-width:900px;margin:0 auto;padding:0 20px}
+
+/* Nav */
+nav{display:flex;justify-content:space-between;align-items:center;padding:18px 0;border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px}
+.glow-text{background:linear-gradient(90deg,var(--a1),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;gap:8px;align-items:center}
+.nav-links a{font-size:13px;color:var(--muted);padding:6px 10px;border-radius:7px;transition:color .15s}
+.nav-links a:hover{color:var(--text)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:13px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);transition:all .15s;white-space:nowrap}
+.btn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.15)}
+.btn.ok{background:rgba(74,222,128,.15);border-color:rgba(74,222,128,.35);color:var(--green)}
+.btn.active{background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.4);color:#c084fc}
+.btn-primary{background:linear-gradient(90deg,var(--a1),var(--a2));border:none;color:#fff;font-weight:500;padding:9px 18px}
+.btn-primary:hover{opacity:.85}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-icon{width:36px;height:36px;padding:0;flex-shrink:0}
+
+/* Cards */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px}
+.card-title{font-size:12px;color:var(--muted);margin-bottom:12px;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+
+/* Inputs */
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+input[type=text],input[type=url],select,textarea{
+  width:100%;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);
+  border-radius:8px;color:var(--text);font-family:inherit;font-size:14px;
+  padding:8px 12px;outline:none;transition:border-color .15s
+}
+input[type=text]:focus,select:focus,input[type=url]:focus{border-color:rgba(168,85,247,.5)}
+select{cursor:pointer}
+select option{background:#0c0c18}
+input[type=range]{width:100%;accent-color:var(--a2);cursor:pointer;height:4px}
+input[type=color]{width:50px;height:36px;padding:2px 3px;border:1px solid rgba(255,255,255,.15);border-radius:7px;background:var(--s1);cursor:pointer;flex-shrink:0}
+.field{display:flex;flex-direction:column;gap:0}
+.row-input{display:flex;gap:8px;align-items:flex-end}
+
+/* Toggle switch */
+.toggle-wrap{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.toggle-wrap span{font-size:13px;color:var(--muted)}
+.toggle{position:relative;width:42px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:#1e1e2e;border-radius:12px;border:1px solid var(--border);transition:.25s}
+.slider::before{content:'';position:absolute;height:16px;width:16px;left:3px;top:3px;background:#444;border-radius:50%;transition:.25s}
+.toggle input:checked+.slider{background:rgba(168,85,247,.3);border-color:rgba(168,85,247,.5)}
+.toggle input:checked+.slider::before{transform:translateX(18px);background:#a855f7}
+
+/* Chip buttons (patterns, animations) */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{cursor:pointer;padding:6px 12px;border-radius:7px;font-family:inherit;font-size:12px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--muted);transition:all .15s;white-space:nowrap}
+.chip:hover{background:rgba(255,255,255,.08);color:var(--text)}
+.chip.sel{background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.45);color:#c084fc}
+
+/* Hero */
+.hero{text-align:center;padding:64px 0 48px}
+.badge{display:inline-block;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);border-radius:20px;color:#c084fc;font-size:12px;padding:5px 14px;margin-bottom:24px}
+h1{font-size:clamp(28px,5vw,50px);font-weight:600;line-height:1.15;margin-bottom:14px}
+.hero-sub{font-size:16px;color:var(--muted);max-width:440px;margin:0 auto 36px}
+.sample-wrap{border-radius:var(--r);overflow:hidden;border:1px solid var(--border);margin-bottom:20px;background:#08080f;min-height:80px}
+.sample-wrap img{width:100%;display:block}
+.quick-row{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:11px 14px}
+.quick-row code{font-family:var(--mono);font-size:12px;color:#7070a0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+
+/* Star banner */
+.star-banner{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(255,107,157,.08),rgba(168,85,247,.08));border:1px solid rgba(255,107,157,.2);border-radius:var(--r);padding:14px 18px;margin-bottom:32px}
+.star-banner p{font-size:13px;color:var(--muted);flex:1}
+.star-banner p strong{color:var(--text)}
+.star-banner a.btn{background:rgba(255,107,157,.12);border-color:rgba(255,107,157,.3);color:#ff6b9d}
+.star-banner a.btn:hover{background:rgba(255,107,157,.2)}
+
+/* Builder */
+#builder h2,#gallery h2,#docs h2{font-size:20px;font-weight:600;margin-bottom:20px}
+.section-gap{margin-bottom:64px}
+.preview-wrap{border-radius:var(--r);overflow:hidden;border:1px solid var(--border);margin-bottom:18px;background:#08080f;min-height:100px;position:relative;transition:background .3s}
+.preview-wrap.checkerboard{background:repeating-conic-gradient(#1a1a2a 0% 25%,#111122 0% 50%) 0 0/20px 20px}
+.preview-wrap img{width:100%;display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.gap-sm{margin-bottom:12px}
+.gap{margin-bottom:16px}
+
+/* Color picker rows */
+.color-cell{display:flex;flex-direction:column;align-items:center;gap:5px}
+.color-cell label{text-align:center}
+
+/* Code output */
+.code-block{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:11px;color:#7070a0;overflow-x:auto;white-space:nowrap;line-height:1.5}
+.action-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+
+/* Gallery */
+.gallery-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.gcard{border-radius:var(--r);overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:border-color .2s;background:#08080f}
+.gcard:hover{border-color:rgba(168,85,247,.4)}
+.gcard img{width:100%;display:block}
+.gcard-foot{display:flex;justify-content:space-between;align-items:center;padding:9px 13px}
+.gcard-foot span{font-size:13px;color:var(--muted)}
+.gcard-foot small{font-size:11px;color:#3a3a55}
+
+/* API table */
+.api-url{background:var(--s1);border:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;border-bottom:none;padding:13px 16px;font-family:var(--mono);font-size:13px;color:#7070a0}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--s1);border:1px solid var(--border);border-radius:0 0 var(--r) var(--r);overflow:hidden}
+th{text-align:left;padding:10px 16px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border)}
+td{padding:8px 16px;border-bottom:1px solid rgba(255,255,255,.04);color:#9090b8}
+tr:last-child td{border-bottom:none}
+.p{font-family:var(--mono);color:#c084fc;white-space:nowrap}
+.t{font-family:var(--mono);color:var(--muted);font-size:11px}
+.ex pre{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:var(--r);padding:16px;font-family:var(--mono);font-size:12px;color:#7070a0;overflow-x:auto;line-height:1.8;margin-top:16px}
+
+/* Footer */
+footer{border-top:1px solid var(--border);padding:28px 0;text-align:center;color:#3a3a55;font-size:13px;margin-bottom:16px}
+footer a{color:#55556a;text-decoration:underline}
+footer strong{background:linear-gradient(90deg,var(--a1),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+@media(max-width:580px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .grid5{grid-template-columns:repeat(3,1fr)}
+  .gallery-grid{grid-template-columns:1fr}
+  .quick-row{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- NAV -->
+<nav>
+  <div class="logo">
+    <span style="font-size:19px">✦</span>
+    <span class="glow-text">TextGlow</span>
+  </div>
+  <div class="nav-links">
+    <a href="#builder">Builder</a>
+    <a href="#gallery">Gallery</a>
+    <a href="#docs">API</a>
+    <a href="https://github.com/mrhx01" target="_blank" class="btn btn-sm">⭐ GitHub</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="badge">Free · Open Source · Zero auth · Node 18+</div>
+  <h1>Beautiful GitHub banners<br><span class="glow-text">with a single URL</span></h1>
+  <p class="hero-sub">Animated, font-rich SVG banners for your README. No uploads, no login — paste and go.</p>
+  <div class="sample-wrap">
+    <img id="hero-img" src="/api/banner?text=Hello!+I'm+Your+Name&sub=I+do+open+source+%3A)&font=Caveat&bg1=0d0d0d&bg2=1a1a2e&t1=ff6b9d&t2=a855f7&sc=a78bfa&size=52&animate=fadein" alt="Sample banner">
+  </div>
+  <div class="quick-row">
+    <code>![header](https://your-app.railway.app/api/banner?text=Hello&font=Caveat&animate=fadein)</code>
+    <a href="#builder" class="btn btn-primary">Try Builder ↓</a>
+  </div>
+</section>
+
+<!-- STAR BANNER -->
+<div class="star-banner">
+  <span style="font-size:22px">⭐</span>
+  <p>Made with ❤️ by <strong>@mrhx01</strong> — if TextGlow saved you time, a star on GitHub means a lot!</p>
+  <a href="https://github.com/mrhx01" target="_blank" class="btn btn-sm">Star on GitHub</a>
+</div>
+
+<!-- BUILDER -->
+<section id="builder" class="section-gap">
+  <h2>Builder</h2>
+
+  <!-- PREVIEW -->
+  <div class="preview-wrap" id="preview-wrap">
+    <img id="preview" src="" alt="Live preview" style="min-height:80px">
+  </div>
+
+  <!-- TEXT SECTION -->
+  <div class="card gap">
+    <div class="card-title">Text</div>
+    <div class="grid2 gap-sm">
+      <div class="field"><label>Main text</label>
+        <input type="text" data-key="text" value="Hello! I'm Your Name" placeholder="Main heading"></div>
+      <div class="field"><label>Subtitle</label>
+        <input type="text" data-key="sub" value="I do open source :)" placeholder="Optional subtitle"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Main size: <span id="v-size">52</span>px</label>
+        <input type="range" data-key="size" min="14" max="90" value="52"></div>
+      <div class="field"><label>Subtitle size: <span id="v-subsize">23</span>px</label>
+        <input type="range" data-key="subsize" min="8" max="60" value="23"></div>
+    </div>
+  </div>
+
+  <!-- FONT SECTION -->
+  <div class="card gap">
+    <div class="card-title">Font</div>
+    <div class="grid2 gap-sm">
+      <div class="field">
+        <label>Preset fonts</label>
+        <select data-key="font" id="font-select">
+          <option value="Caveat">Caveat — handwritten</option>
+          <option value="Pacifico">Pacifico — round</option>
+          <option value="Bangers">Bangers — comic</option>
+          <option value="Lobster">Lobster — classic</option>
+          <option value="Permanent Marker">Permanent Marker — marker</option>
+          <option value="Dancing Script">Dancing Script — script</option>
+          <option value="Righteous">Righteous — geometric</option>
+          <option value="Fredoka One">Fredoka One — friendly</option>
+          <option value="Orbitron">Orbitron — sci-fi</option>
+          <option value="Press Start 2P">Press Start 2P — pixel</option>
+          <option value="Raleway">Raleway — elegant</option>
+          <option value="Bebas Neue">Bebas Neue — bold</option>
+          <option value="Sacramento">Sacramento — calligraphy</option>
+          <option value="Russo One">Russo One — strong</option>
+          <option value="Bungee">Bungee — display</option>
+          <option value="Abril Fatface">Abril Fatface — display</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Custom Google Font</label>
+        <div class="row-input">
+          <input type="text" id="custom-font" placeholder="e.g. Josefin Sans">
+          <button class="btn btn-sm" id="apply-font">Apply</button>
+        </div>
+      </div>
+    </div>
+    <div class="field" style="margin-top:10px">
+      <label>Text align</label>
+      <div class="chips" id="align-chips">
+        <button class="chip" data-align="left">← Left</button>
+        <button class="chip sel" data-align="center">Center</button>
+        <button class="chip" data-align="right">Right →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRESETS -->
+  <div class="card gap">
+    <div class="card-title">Preset themes</div>
+    <div class="chips" id="preset-chips"></div>
+  </div>
+
+  <!-- COLORS -->
+  <div class="card gap">
+    <div class="card-title">Colors</div>
+    <div class="grid5">
+      <div class="color-cell"><label>BG start</label><input type="color" data-key="bg1" value="#0d0d0d"></div>
+      <div class="color-cell"><label>BG end</label><input type="color" data-key="bg2" value="#1a1a2e"></div>
+      <div class="color-cell"><label>Text start</label><input type="color" data-key="t1" value="#ff6b9d"></div>
+      <div class="color-cell"><label>Text end</label><input type="color" data-key="t2" value="#a855f7"></div>
+      <div class="color-cell"><label>Subtitle</label><input type="color" data-key="sc" value="#a78bfa"></div>
+    </div>
+  </div>
+
+  <!-- BACKGROUND -->
+  <div class="card gap">
+    <div class="card-title">Background</div>
+    <div class="gap-sm">
+      <label class="toggle-wrap">
+        <label class="toggle"><input type="checkbox" id="transparent-toggle"><span class="slider"></span></label>
+        <span>Transparent background (great for dark/light README themes)</span>
+      </label>
+    </div>
+    <div class="field gap-sm">
+      <label>Background pattern</label>
+      <div class="chips" id="pattern-chips"></div>
+    </div>
+    <div class="grid2" id="pat-extras" style="display:none">
+      <div class="field"><label>Pattern color</label>
+        <input type="color" data-key="patcolor" value="#ffffff"></div>
+      <div class="field"><label>Pattern opacity: <span id="v-patop">10</span>%</label>
+        <input type="range" data-key="patop" min="1" max="60" value="10"></div>
+    </div>
+  </div>
+
+  <!-- EFFECTS / ANIMATION -->
+  <div class="card gap">
+    <div class="card-title">Animation</div>
+    <div class="chips" id="anim-chips"></div>
+  </div>
+
+  <!-- SHADOW -->
+  <div class="card gap">
+    <div class="card-title">Text shadow</div>
+    <div class="gap-sm">
+      <label class="toggle-wrap">
+        <label class="toggle"><input type="checkbox" id="shadow-toggle"><span class="slider"></span></label>
+        <span>Enable text shadow / glow</span>
+      </label>
+    </div>
+    <div id="shadow-extras" style="display:none">
+      <div class="grid2 gap-sm" style="margin-top:12px">
+        <div class="field"><label>Shadow color</label>
+          <div class="row-input">
+            <input type="color" data-key="shadow" value="#ff6b9d">
+            <input type="text" id="shadow-hex" value="ff6b9d" placeholder="hex" style="flex:1">
+          </div>
+        </div>
+        <div class="field"><label>Blur: <span id="v-shadowblur">8</span>px</label>
+          <input type="range" data-key="shadowblur" min="0" max="40" value="8"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>X offset: <span id="v-shadowx">0</span></label>
+          <input type="range" data-key="shadowx" min="-20" max="20" value="0"></div>
+        <div class="field"><label>Y offset: <span id="v-shadowy">3</span></label>
+          <input type="range" data-key="shadowy" min="-20" max="20" value="3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIMENSIONS -->
+  <div class="card gap">
+    <div class="card-title">Dimensions</div>
+    <div class="grid3">
+      <div class="field"><label>Width: <span id="v-width">860</span>px</label>
+        <input type="range" data-key="width" min="300" max="1400" value="860" step="10"></div>
+      <div class="field"><label>Height <small style="color:var(--muted)">(auto if empty)</small></label>
+        <input type="text" data-key="height" placeholder="auto" style="margin-top:6px"></div>
+      <div class="field"><label>Align</label>
+        <select data-key="align" id="align-select" style="margin-top:6px">
+          <option value="center">Center</option>
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHARE / IMPORT -->
+  <div class="card gap">
+    <div class="card-title">Share theme</div>
+    <div class="action-row gap-sm">
+      <button class="btn" id="share-btn">🔗 Copy share link</button>
+      <button class="btn" id="share-import-toggle">📥 Import theme URL</button>
+    </div>
+    <div id="import-area" style="display:none;margin-top:12px">
+      <div class="row-input">
+        <input type="url" id="import-input" placeholder="Paste share link here…">
+        <button class="btn btn-sm" id="import-btn">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="card">
+    <div class="card-title">Output</div>
+    <div class="code-block" id="md-output"></div>
+    <div class="action-row">
+      <button class="btn" id="copy-md">Copy Markdown</button>
+      <button class="btn" id="copy-url">Copy URL</button>
+      <a class="btn" id="dl-btn" download="textglow-banner.svg">Download SVG</a>
+    </div>
+  </div>
+</section>
+
+<!-- GALLERY -->
+<section id="gallery" class="section-gap">
+  <h2>Preset Gallery</h2>
+  <p style="color:var(--muted);font-size:14px;margin-bottom:20px">Click any card to load the theme into the builder.</p>
+  <div class="gallery-grid" id="gallery-grid"></div>
+</section>
+
+<!-- API DOCS -->
+<section id="docs" class="section-gap">
+  <h2>API Reference</h2>
+  <div class="api-url">GET /api/banner?[params]</div>
+  <table>
+    <thead><tr><th>Param</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="p">text</td><td class="t">string</td><td class="t">Hello World</td><td>Main heading text</td></tr>
+      <tr><td class="p">sub</td><td class="t">string</td><td class="t">—</td><td>Subtitle / subheading</td></tr>
+      <tr><td class="p">font</td><td class="t">string</td><td class="t">Caveat</td><td>Any Google Font name (spaces OK)</td></tr>
+      <tr><td class="p">bg1</td><td class="t">hex</td><td class="t">0d0d0d</td><td>Background gradient start</td></tr>
+      <tr><td class="p">bg2</td><td class="t">hex</td><td class="t">1a1a2e</td><td>Background gradient end</td></tr>
+      <tr><td class="p">t1</td><td class="t">hex</td><td class="t">ff6b9d</td><td>Text gradient start</td></tr>
+      <tr><td class="p">t2</td><td class="t">hex</td><td class="t">a855f7</td><td>Text gradient end</td></tr>
+      <tr><td class="p">sc</td><td class="t">hex</td><td class="t">a78bfa</td><td>Subtitle color</td></tr>
+      <tr><td class="p">size</td><td class="t">number</td><td class="t">52</td><td>Main font size px (14–90)</td></tr>
+      <tr><td class="p">subsize</td><td class="t">number</td><td class="t">auto</td><td>Subtitle font size px</td></tr>
+      <tr><td class="p">width</td><td class="t">number</td><td class="t">860</td><td>Banner width px (300–1600)</td></tr>
+      <tr><td class="p">height</td><td class="t">number</td><td class="t">auto</td><td>Banner height px (50–500)</td></tr>
+      <tr><td class="p">align</td><td class="t">enum</td><td class="t">center</td><td>left · center · right</td></tr>
+      <tr><td class="p">transparent</td><td class="t">0|1</td><td class="t">0</td><td>Transparent background</td></tr>
+      <tr><td class="p">pattern</td><td class="t">string</td><td class="t">none</td><td>dots · grid · diagonal · crosshatch · circles · hex · zigzag · waves · plus · triangles</td></tr>
+      <tr><td class="p">patcolor</td><td class="t">hex</td><td class="t">ffffff</td><td>Pattern color</td></tr>
+      <tr><td class="p">patop</td><td class="t">0–100</td><td class="t">10</td><td>Pattern opacity %</td></tr>
+      <tr><td class="p">animate</td><td class="t">string</td><td class="t">none</td><td>fadein · slidein · slideup · glow · bounce · pulse · shake · rotate · typewriter</td></tr>
+      <tr><td class="p">shadow</td><td class="t">hex</td><td class="t">—</td><td>Text shadow color</td></tr>
+      <tr><td class="p">shadowblur</td><td class="t">number</td><td class="t">8</td><td>Shadow blur radius</td></tr>
+      <tr><td class="p">shadowx</td><td class="t">number</td><td class="t">0</td><td>Shadow X offset</td></tr>
+      <tr><td class="p">shadowy</td><td class="t">number</td><td class="t">3</td><td>Shadow Y offset</td></tr>
+    </tbody>
+  </table>
+  <div class="ex">
+    <pre>
+# Hi, I'm Ali 👋
+
+![header](https://your-app.railway.app/api/banner?text=Hi!+I'm+Ali&sub=Full-stack+developer&font=Caveat&bg1=0d0d0d&bg2=1a1a2e&t1=ff6b9d&t2=a855f7&animate=fadein&pattern=dots)
+
+Welcome to my GitHub profile!
+    </pre>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div style="margin-bottom:8px">
+    <strong>✦ TextGlow</strong> —
+    Deploy on <a href="https://railway.app" target="_blank">Railway</a> or
+    <a href="https://render.com" target="_blank">Render</a> in one click
+  </div>
+  <div>
+    Built by <a href="https://github.com/mrhx01" target="_blank">@mrhx01</a> ·
+    Fonts by <a href="https://fonts.google.com" target="_blank">Google Fonts</a> ·
+    MIT License · Zero dependencies · Node 18+
+  </div>
+  <div style="margin-top:10px">
+    If this helped you, please
+    <a href="https://github.com/mrhx01" target="_blank">⭐ star the repo</a>
+    — it helps a lot!
+  </div>
+</footer>
+
+</div><!-- /wrap -->
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   CONSTANTS
+══════════════════════════════════════════════════════════ */
+const PRESETS = [
+  { name:'Dark Pink',  bg1:'0d0d0d', bg2:'1a1a2e', t1:'ff6b9d', t2:'a855f7', sc:'a78bfa' },
+  { name:'Ocean',      bg1:'0f0c29', bg2:'302b63', t1:'43e97b', t2:'38f9d7', sc:'6ee7da' },
+  { name:'Sunset',     bg1:'1e0000', bg2:'3d0000', t1:'ff9a44', t2:'fc6076', sc:'ffb347' },
+  { name:'Midnight',   bg1:'060d1a', bg2:'0a1f37', t1:'4dd0e1', t2:'00bfa5', sc:'7fe0d4' },
+  { name:'Galaxy',     bg1:'0a0015', bg2:'1e0030', t1:'e040fb', t2:'7c4dff', sc:'ce93d8' },
+  { name:'Gold',       bg1:'1a1200', bg2:'2e2000', t1:'ffd700', t2:'ff8c00', sc:'ffc040' },
+  { name:'Neon',       bg1:'000000', bg2:'001a00', t1:'39ff14', t2:'00ff88', sc:'7fff00'  },
+  { name:'Sakura',     bg1:'190010', bg2:'2d0025', t1:'ff94c2', t2:'ff5fa0', sc:'ffb3d1' },
+  { name:'Arctic',     bg1:'001a2e', bg2:'002b4a', t1:'a8edea', t2:'fed6e3', sc:'e0f7fa' },
+  { name:'Lava',       bg1:'1a0000', bg2:'0d0000', t1:'ff4500', t2:'ff6b00', sc:'ff8c42' },
+  { name:'Forest',     bg1:'001a00', bg2:'002800', t1:'86efac', t2:'4ade80', sc:'a7f3d0' },
+  { name:'Candy',      bg1:'1a001a', bg2:'280028', t1:'f9a8d4', t2:'fca5a5', sc:'fbcfe8' },
+];
+
+const PATTERNS = [
+  { id:'none',       label:'None'       },
+  { id:'dots',       label:'Dots'       },
+  { id:'grid',       label:'Grid'       },
+  { id:'diagonal',   label:'Diagonal'   },
+  { id:'crosshatch', label:'Crosshatch' },
+  { id:'circles',    label:'Circles'    },
+  { id:'hex',        label:'Hexagon'    },
+  { id:'zigzag',     label:'Zigzag'     },
+  { id:'waves',      label:'Waves'      },
+  { id:'plus',       label:'Plus'       },
+  { id:'triangles',  label:'Triangles'  },
+];
+
+const ANIMATIONS = [
+  { id:'none',       label:'None'        },
+  { id:'fadein',     label:'Fade In'     },
+  { id:'slidein',    label:'Slide Down'  },
+  { id:'slideup',    label:'Slide Up'    },
+  { id:'glow',       label:'Glow'        },
+  { id:'bounce',     label:'Bounce'      },
+  { id:'pulse',      label:'Pulse'       },
+  { id:'shake',      label:'Shake'       },
+  { id:'rotate',     label:'Rock'        },
+  { id:'typewriter', label:'Typewriter'  },
+];
+
+/* ══════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════ */
+const DEFAULT = {
+  text:'Hello! I\'m Your Name', sub:'I do open source :)',
+  font:'Caveat',
+  bg1:'0d0d0d', bg2:'1a1a2e', t1:'ff6b9d', t2:'a855f7', sc:'a78bfa',
+  size:'52', subsize:'23',
+  width:'860', height:'', align:'center',
+  transparent:'0',
+  pattern:'none', patcolor:'ffffff', patop:'10',
+  animate:'none',
+  shadow:'', shadowblur:'8', shadowx:'0', shadowy:'3',
+};
+
+const state = { ...DEFAULT };
+
+/* ══════════════════════════════════════════════════════════
+   THEME IMPORT via ?t= URL param
+══════════════════════════════════════════════════════════ */
+(function importOnLoad() {
+  try {
+    const t = new URLSearchParams(location.search).get('t');
+    if (!t) return;
+    const decoded = JSON.parse(atob(t));
+    Object.assign(state, decoded);
+    history.replaceState({}, '', location.pathname); // clean URL
+  } catch {}
+})();
+
+/* ══════════════════════════════════════════════════════════
+   URL BUILDING
+══════════════════════════════════════════════════════════ */
+function buildParams(overrides) {
+  const s = Object.assign({}, state, overrides || {});
+  const p = new URLSearchParams();
+  Object.entries(s).forEach(([k, v]) => {
+    if (v !== '' && v !== null && v !== undefined) p.set(k, v);
+  });
+  return p;
+}
+
+function apiPath(overrides)  { return '/api/banner?' + buildParams(overrides); }
+function fullUrl(overrides)  { return location.origin + apiPath(overrides); }
+function shareUrl()          { return location.origin + '/?t=' + btoa(JSON.stringify(state)); }
+
+/* ══════════════════════════════════════════════════════════
+   PREVIEW  (debounced)
+══════════════════════════════════════════════════════════ */
+let debTimer;
+function scheduleUpdate() {
+  clearTimeout(debTimer);
+  debTimer = setTimeout(applyPreview, 320);
+}
+
+function applyPreview() {
+  const path = apiPath();
+  document.getElementById('preview').src = path;
+  document.getElementById('md-output').textContent = '![header](' + fullUrl() + ')';
+  document.getElementById('dl-btn').href = path;
+
+  const wrap = document.getElementById('preview-wrap');
+  wrap.classList.toggle('checkerboard', state.transparent === '1');
+}
+
+/* ══════════════════════════════════════════════════════════
+   BIND ALL INPUTS
+══════════════════════════════════════════════════════════ */
+function applyStateToInputs() {
+  document.querySelectorAll('[data-key]').forEach(el => {
+    const k = el.dataset.key;
+    if (!(k in state)) return;
+    if (el.type === 'color') {
+      el.value = '#' + String(state[k]).replace(/^#/, '');
+    } else if (el.type === 'range' || el.tagName === 'SELECT' || el.type === 'text') {
+      el.value = state[k];
+    }
+  });
+  // sliders labels
+  ['size','subsize','width','patop','shadowblur','shadowx','shadowy'].forEach(k => {
+    const el = document.getElementById('v-' + k);
+    if (el) el.textContent = state[k];
+  });
+  // font select
+  const fs = document.getElementById('font-select');
+  if ([...fs.options].some(o => o.value === state.font)) {
+    fs.value = state.font;
+    document.getElementById('custom-font').value = '';
+  } else {
+    document.getElementById('custom-font').value = state.font;
+  }
+  // transparent
+  document.getElementById('transparent-toggle').checked = state.transparent === '1';
+  // shadow
+  const shadowOn = !!state.shadow && state.shadow !== '';
+  document.getElementById('shadow-toggle').checked = shadowOn;
+  document.getElementById('shadow-extras').style.display = shadowOn ? '' : 'none';
+  // pattern extras
+  document.getElementById('pat-extras').style.display = state.pattern !== 'none' ? '' : 'none';
+  // chips
+  document.querySelectorAll('#pattern-chips .chip').forEach(c => {
+    c.classList.toggle('sel', c.dataset.pattern === state.pattern);
+  });
+  document.querySelectorAll('#anim-chips .chip').forEach(c => {
+    c.classList.toggle('sel', c.dataset.anim === state.animate);
+  });
+  document.querySelectorAll('#align-chips .chip').forEach(c => {
+    c.classList.toggle('sel', c.dataset.align === state.align);
+  });
+}
+
+document.querySelectorAll('[data-key]').forEach(el => {
+  el.addEventListener('input', e => {
+    const k = e.target.dataset.key;
+    const v = e.target.type === 'color'
+      ? e.target.value.replace('#', '')
+      : e.target.value;
+    state[k] = v;
+    // label updates
+    const lbl = document.getElementById('v-' + k);
+    if (lbl) lbl.textContent = v;
+    // shadow hex sync
+    if (k === 'shadow') document.getElementById('shadow-hex').value = v;
+    scheduleUpdate();
+  });
+});
+
+// shadow hex text input sync
+document.getElementById('shadow-hex').addEventListener('input', e => {
+  const v = e.target.value.replace(/^#/, '');
+  state.shadow = v;
+  document.querySelector('[data-key=shadow]').value = '#' + v.padEnd(6, '0').slice(0, 6);
+  scheduleUpdate();
+});
+
+/* ══════════════════════════════════════════════════════════
+   FONT HANDLING
+══════════════════════════════════════════════════════════ */
+document.getElementById('font-select').addEventListener('change', e => {
+  state.font = e.target.value;
+  document.getElementById('custom-font').value = '';
+  loadGoogleFont(state.font);
+  scheduleUpdate();
+});
+
+document.getElementById('apply-font').addEventListener('click', () => {
+  const v = document.getElementById('custom-font').value.trim();
+  if (!v) return;
+  state.font = v;
+  // deselect dropdown
+  document.getElementById('font-select').value = '';
+  loadGoogleFont(v);
+  scheduleUpdate();
+});
+
+document.getElementById('custom-font').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('apply-font').click();
+});
+
+function loadGoogleFont(name) {
+  if (!name) return;
+  const slug = name.replace(/ /g, '+');
+  const id   = 'gf-' + slug;
+  if (!document.getElementById(id)) {
+    const link = document.createElement('link');
+    link.id   = id;
+    link.rel  = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=${slug}:wght@700&display=swap`;
+    document.head.appendChild(link);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   TRANSPARENT TOGGLE
+══════════════════════════════════════════════════════════ */
+document.getElementById('transparent-toggle').addEventListener('change', e => {
+  state.transparent = e.target.checked ? '1' : '0';
+  scheduleUpdate();
+});
+
+/* ══════════════════════════════════════════════════════════
+   SHADOW TOGGLE
+══════════════════════════════════════════════════════════ */
+document.getElementById('shadow-toggle').addEventListener('change', e => {
+  const on = e.target.checked;
+  document.getElementById('shadow-extras').style.display = on ? '' : 'none';
+  state.shadow = on ? (state.shadow || 'ff6b9d') : '';
+  if (on) document.getElementById('shadow-hex').value = state.shadow;
+  scheduleUpdate();
+});
+
+/* ══════════════════════════════════════════════════════════
+   PATTERN CHIPS
+══════════════════════════════════════════════════════════ */
+const patRow = document.getElementById('pattern-chips');
+PATTERNS.forEach(p => {
+  const btn = document.createElement('button');
+  btn.className = 'chip' + (p.id === 'none' ? ' sel' : '');
+  btn.dataset.pattern = p.id;
+  btn.textContent = p.label;
+  btn.addEventListener('click', () => {
+    state.pattern = p.id;
+    patRow.querySelectorAll('.chip').forEach(c => c.classList.toggle('sel', c.dataset.pattern === p.id));
+    document.getElementById('pat-extras').style.display = p.id !== 'none' ? '' : 'none';
+    scheduleUpdate();
+  });
+  patRow.appendChild(btn);
+});
+
+/* ══════════════════════════════════════════════════════════
+   ANIMATION CHIPS
+══════════════════════════════════════════════════════════ */
+const animRow = document.getElementById('anim-chips');
+ANIMATIONS.forEach(a => {
+  const btn = document.createElement('button');
+  btn.className = 'chip' + (a.id === 'none' ? ' sel' : '');
+  btn.dataset.anim = a.id;
+  btn.textContent = a.label;
+  btn.addEventListener('click', () => {
+    state.animate = a.id;
+    animRow.querySelectorAll('.chip').forEach(c => c.classList.toggle('sel', c.dataset.anim === a.id));
+    scheduleUpdate();
+  });
+  animRow.appendChild(btn);
+});
+
+/* ══════════════════════════════════════════════════════════
+   ALIGN CHIPS
+══════════════════════════════════════════════════════════ */
+document.querySelectorAll('#align-chips .chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.align = btn.dataset.align;
+    document.getElementById('align-select').value = state.align;
+    document.querySelectorAll('#align-chips .chip').forEach(c =>
+      c.classList.toggle('sel', c.dataset.align === state.align));
+    scheduleUpdate();
+  });
+});
+
+document.getElementById('align-select').addEventListener('change', e => {
+  state.align = e.target.value;
+  document.querySelectorAll('#align-chips .chip').forEach(c =>
+    c.classList.toggle('sel', c.dataset.align === state.align));
+  scheduleUpdate();
+});
+
+/* ══════════════════════════════════════════════════════════
+   PRESET CHIPS
+══════════════════════════════════════════════════════════ */
+const presetRow = document.getElementById('preset-chips');
+PRESETS.forEach(p => {
+  const btn = document.createElement('button');
+  btn.className = 'chip';
+  btn.textContent = p.name;
+  btn.style.background = `linear-gradient(90deg,#${p.t1}22,#${p.t2}22)`;
+  btn.style.color = '#' + p.t2;
+  btn.style.borderColor = `rgba(0,0,0,0)`;
+  btn.addEventListener('click', () => applyPreset(p));
+  presetRow.appendChild(btn);
+});
+
+function applyPreset(p) {
+  ['bg1','bg2','t1','t2','sc'].forEach(k => {
+    state[k] = p[k];
+    const el = document.querySelector(`[data-key="${k}"]`);
+    if (el && el.type === 'color') el.value = '#' + p[k];
+  });
+  scheduleUpdate();
+}
+
+/* ══════════════════════════════════════════════════════════
+   COPY BUTTONS
+══════════════════════════════════════════════════════════ */
+function flash(btn, label) {
+  const orig = btn.textContent;
+  btn.textContent = '✓ Copied!';
+  btn.classList.add('ok');
+  setTimeout(() => { btn.textContent = label; btn.classList.remove('ok'); }, 2000);
+}
+
+document.getElementById('copy-md').addEventListener('click', function() {
+  navigator.clipboard.writeText('![header](' + fullUrl() + ')');
+  flash(this, 'Copy Markdown');
+});
+document.getElementById('copy-url').addEventListener('click', function() {
+  navigator.clipboard.writeText(fullUrl());
+  flash(this, 'Copy URL');
+});
+
+/* ══════════════════════════════════════════════════════════
+   SHARE / IMPORT THEME
+══════════════════════════════════════════════════════════ */
+document.getElementById('share-btn').addEventListener('click', function() {
+  navigator.clipboard.writeText(shareUrl());
+  flash(this, '🔗 Copy share link');
+});
+
+document.getElementById('share-import-toggle').addEventListener('click', () => {
+  const area = document.getElementById('import-area');
+  area.style.display = area.style.display === 'none' ? '' : 'none';
+});
+
+document.getElementById('import-btn').addEventListener('click', () => {
+  const val = document.getElementById('import-input').value.trim();
+  try {
+    let t;
+    if (val.includes('?t=')) {
+      t = new URL(val).searchParams.get('t');
+    } else if (val.includes('?')) {
+      // raw query params share URL → apply directly
+      const params = new URL(val).searchParams;
+      params.forEach((v, k) => { if (k in DEFAULT) state[k] = v; });
+      applyStateToInputs();
+      scheduleUpdate();
+      document.getElementById('import-area').style.display = 'none';
+      document.getElementById('import-input').value = '';
+      return;
+    } else {
+      t = val; // raw base64
+    }
+    if (!t) return;
+    const decoded = JSON.parse(atob(t));
+    Object.assign(state, decoded);
+    applyStateToInputs();
+    scheduleUpdate();
+    document.getElementById('import-area').style.display = 'none';
+    document.getElementById('import-input').value = '';
+  } catch {
+    alert('Invalid theme link. Please paste a valid TextGlow share link.');
+  }
+});
+
+/* ══════════════════════════════════════════════════════════
+   GALLERY
+══════════════════════════════════════════════════════════ */
+const galleryGrid = document.getElementById('gallery-grid');
+PRESETS.forEach(p => {
+  const url = `/api/banner?text=Hello+World&sub=github.com%2Fyou&font=Caveat`+
+    `&bg1=${p.bg1}&bg2=${p.bg2}&t1=${p.t1}&t2=${p.t2}&sc=${p.sc}&size=42&height=110`;
+  const card = document.createElement('div');
+  card.className = 'gcard';
+  card.innerHTML = `
+    <img src="${url}" alt="${p.name}" loading="lazy">
+    <div class="gcard-foot">
+      <span>${p.name}</span>
+      <small>Use theme →</small>
+    </div>`;
+  card.addEventListener('click', () => {
+    applyPreset(p);
+    document.getElementById('builder').scrollIntoView({ behavior:'smooth' });
+  });
+  galleryGrid.appendChild(card);
+});
+
+/* ══════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════ */
+applyStateToInputs();
+loadGoogleFont(state.font);
+scheduleUpdate();
+</script>
+</body>
+</html>
